@@ -1,0 +1,22 @@
+# Acesso à Base dos Dados (BigQuery)
+basedosdados==2.0.3   # fixada: testada com read_sql(query, billing_project_id=...)
+google-cloud-bigquery>=3.0
+google-api-core>=2.0
+google-auth>=2.0
+
+# Dados
+pandas>=2.0
+pyarrow>=14.0        # leitura/escrita de Parquet
+
+# Configuração local (.env)
+python-dotenv>=1.0
+
+# Modelagem (fases seguintes)
+numpy>=1.26
+scikit-learn>=1.4
+
+# Testes
+pytest>=8.0
+
+# Removido na mudança de fonte (nov/2026): requests/urllib3 para download
+# de zips do INEP, lógica de extração de zip e verificação de certificado TLS.

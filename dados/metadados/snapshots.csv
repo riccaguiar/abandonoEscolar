@@ -1,0 +1,6 @@
+snapshot_id,consulta,sha256_consulta,data_extracao_utc,n_linhas,n_colunas,versao_basedosdados,arquivo
+check_tx_rend_20261103T210140Z,check_tx_rend,2b85881159c2da20525f22f372fbfbc72275cfdd99c8a72c80f7b46e8170a81c,2026-11-03T21:01:40+00:00,5,58,2.0.3,check_tx_rend_20261103T210140Z.parquet
+check_tx_rend_20261103T210359Z,check_tx_rend,e43245354d97748b292b7ced5607d3dd3722801dfdc95ed40c093b53004b5975,2026-11-03T21:03:59+00:00,6,60,2.0.3,check_tx_rend_20261103T210359Z.parquet
+abandono_por_ano_20261103T210525Z,abandono_por_ano,805dc46a2ac1428f62dc3384b6d331cca8f589e7619069a54791a808262ffbe5,2026-11-03T21:05:25+00:00,36,8,2.0.3,abandono_por_ano_20261103T210525Z.parquet
+abandono_por_ano_20261103T210557Z,abandono_por_ano,805dc46a2ac1428f62dc3384b6d331cca8f589e7619069a54791a808262ffbe5,2026-11-03T21:05:57+00:00,36,8,2.0.3,abandono_por_ano_20261103T210557Z.parquet
+abandono_por_ano_20261103T211101Z,abandono_por_ano,805dc46a2ac1428f62dc3384b6d331cca8f589e7619069a54791a808262ffbe5,2026-11-03T21:11:01+00:00,36,8,2.0.3,abandono_por_ano_20261103T211101Z.parquet
