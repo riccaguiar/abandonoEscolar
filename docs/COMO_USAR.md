@@ -83,7 +83,19 @@ Gera `docs/figuras/abandono_rr.html` (abre em qualquer navegador, sem
 internet) e salva o snapshot da consulta. Anos com dado inconsistente
 aparecem hachurados, sem linha.
 
-## 7. Se algo falhar
+## 7. Conferência escola a escola (BD × INEP)
+
+Precisa da base do INEP do grupo (`gustavo/saida/base_atual.parquet`, repositório
+`GustavoGGI/Dados-do-Projeto`). Clone o repositório e aponte para o arquivo:
+
+```powershell
+python -m src.conferencia_rendimento --base-inep C:\caminho\Dados-do-Projeto\gustavo\saida\base_atual.parquet
+```
+
+Ou defina `INEP_BASE_ATUAL` no `.env`. Usa o último snapshot da BD em
+`dados/cache/`; `--extrair` consulta a BD de novo. Saídas em `docs/conferencia/`.
+
+## 8. Se algo falhar
 
 | Mensagem | O que fazer |
 |---|---|
@@ -94,7 +106,7 @@ aparecem hachurados, sem linha.
 | "Falha temporária ... Nova tentativa" | Normal. O programa repete sozinho (até 4 vezes). |
 | Saída com código 2 | Não é bug: a Base dos Dados não passou no gate. Registre em `06_DECISOES_PROBLEMAS_PERGUNTAS.md`. |
 
-## 8. Testes
+## 9. Testes
 
 Não usam rede nem credenciais:
 
@@ -102,7 +114,7 @@ Não usam rede nem credenciais:
 python -m pytest -q
 ```
 
-## 9. Cuidados
+## 10. Cuidados
 
 - Não coloque senhas, tokens ou arquivos de credencial no repositório.
 - Consultas gastam cota do BigQuery. A Etapa zero é leve (filtra UF e

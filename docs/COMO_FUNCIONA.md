@@ -28,6 +28,7 @@ sql/*.sql  ──► src/consultas.py ──► src/extracao_bd.py ──► Big
 | `sql/verificacao/00_colunas_indicadores_escola.sql` | Lista as colunas da tabela (só metadados, custo ~zero). |
 | `sql/verificacao/01_presenca_tx_rend.sql` | Conta escolas e valores não nulos de rendimento por ano. |
 | `src/grafico_abandono.py` + `sql/exploracao/01_abandono_por_ano.sql` | Gera `docs/figuras/abandono_<uf>.html`: série de abandono UF x Brasil, escolas públicas. |
+| `src/conferencia_rendimento.py` + `sql/verificacao/02_escolas_uf_todas_colunas.sql` | Fase 3.1: confere o rendimento da BD com o INEP do grupo escola a escola e localiza colunas deslocadas. Saídas em `docs/conferencia/`. |
 | `tests/` | Testes sem rede: usam uma `basedosdados` falsa. |
 
 ## Etapa zero, passo a passo
@@ -81,13 +82,12 @@ embrulha erros do Google) e decide:
 - Ela **não tem `sigla_uf`**. A UF é filtrada pelos 2 primeiros dígitos do
   código INEP da escola, `id_escola` (RR = `14`). `id_municipio` não serve:
   está nulo em todas as linhas de 2022.
-- **2023 e 2024 estão inconsistentes** na tabela por escola: aprovação +
-  reprovação + abandono não fecha 100% (no Brasil inteiro, não só em RR).
-  O gate reprova esses anos. A tabela agregada `brasil` está correta nesses
-  anos, o que aponta para um problema de carga na tabela `escola`.
+- **2023 e 2024 têm as colunas deslocadas 71 posições** na tabela por escola
+  (diagnóstico escola a escola em `docs/conferencia/RESULTADO_FASE_3_1.md`).
+  Por isso aprovação + reprovação + abandono não fecha 100%. O gate reprova esses anos.
 - **2025 ainda não está publicado** na tabela por escola (a `brasil` já tem).
-- 2019–2022 batem com a base INEP legada (ex.: anos finais 2020 = 0,99%,
-  2021 = 2,96%, todas as redes).
+- 2007–2022: as 12 taxas de rendimento conferem com o INEP **escola a escola**
+  (uma escola divergente em 2007). Conferência: `src/conferencia_rendimento.py`.
 - Tem colunas de rendimento por etapa e série (`taxa_aprovacao_*`,
   `taxa_reprovacao_*`, `taxa_abandono_*`). Os alvos do projeto são
   `taxa_abandono_ef_anos_finais` e `taxa_abandono_em`.
