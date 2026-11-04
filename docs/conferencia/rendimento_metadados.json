@@ -1,0 +1,13 @@
+{
+  "gerado_utc": "2026-11-04T02:21:28+00:00",
+  "snapshot_bd": "escolas_rr_todas_colunas_20261104T021802Z.parquet",
+  "sha256_snapshot_bd": "122fd8beb0604aacde763e5061097365de56e2a3fc4a41b6ee3b2c0ddcb8dd1f",
+  "base_inep": "base_atual.parquet",
+  "sha256_base_inep": "6e6339302fcded4ab9fa9e5d7d2000e83ffc467d2bf6b5521dc8d93bbfb6a85a",
+  "anos": [
+    2007,
+    2024
+  ],
+  "tolerancia": 1e-09,
+  "id_escola_corrigidos_sufixo_ponto_zero": 870
+}
