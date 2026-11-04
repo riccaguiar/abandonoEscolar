@@ -5,7 +5,8 @@ dentro, veja `COMO_FUNCIONA.md`.
 
 ## 1. Pré-requisitos
 
-- Python 3.12 ou mais novo (testado com 3.14).
+- Python 3.12 ou mais novo. O grupo usa 3.12; o ambiente travado em
+  `requirements-lock.txt` foi gerado com 3.14.
 - Conta Google com acesso ao projeto `abandonoescolar1` (faturamento do
   BigQuery ativo e API do BigQuery habilitada).
 - Acesso à internet.
@@ -17,7 +18,7 @@ PowerShell, na pasta do projeto:
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-lock.txt
 copy .env.example .env
 ```
 
@@ -104,7 +105,8 @@ Ou defina `INEP_BASE_ATUAL` no `.env`. Usa o último snapshot da BD em
 | "Tabela ou dataset não encontrado" / "não existe ou não tem colunas" | O nome da tabela em `src/config.py` está errado (a atual, `escola`, já foi confirmada). Procure o correto em https://basedosdados.org/. |
 | "Colunas obrigatórias ausentes" | A tabela mudou de schema. Compare com `COLUNAS_OBRIGATORIAS` em `src/extracao_bd.py` e ajuste os SQL. |
 | "Falha temporária ... Nova tentativa" | Normal. O programa repete sozinho (até 4 vezes). |
-| Saída com código 2 | Não é bug: a Base dos Dados não passou no gate. Registre em `06_DECISOES_PROBLEMAS_PERGUNTAS.md`. |
+| Saída com código 2 | Não é bug: a Base dos Dados não passou no gate. Hoje é o esperado (2023–2025; ver `docs/PENDENCIAS.md`). |
+| Saída com código 3 / "devolveu um resultado diferente do snapshot" | A BD mudou desde a última extração. Compare o arquivo em `dados/cache/divergente/` com o snapshot anterior; para adotar o novo, rode de novo com `--aceitar-divergencia`. |
 
 ## 9. Testes
 

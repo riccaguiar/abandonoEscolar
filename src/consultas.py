@@ -58,6 +58,14 @@ def validar_dataset(dataset: str) -> str:
     return dataset
 
 
+def formatar_tolerancia(tol: float) -> str:
+    """Literal decimal para SQL (sem notação científica), só para 0 < tol < 1."""
+    tol = float(tol)
+    if not 0 < tol < 1:
+        raise ValueError(f"Tolerância inválida: {tol!r}")
+    return f"{tol:.12f}"
+
+
 def montar_contagens_nao_nulos(colunas: list[str]) -> str:
     """Uma expressão COUNTIF(col IS NOT NULL) AS nn_col por coluna."""
     if not colunas:

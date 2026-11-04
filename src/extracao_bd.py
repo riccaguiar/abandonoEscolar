@@ -8,32 +8,30 @@ Fluxo (ver docs/COMO_FUNCIONA.md):
      dados/metadados/snapshots.csv.
   5. Avalia o gate e devolve o código de saída.
 
-Códigos de saída: 0 = gate aprovado; 1 = erro técnico; 2 = gate reprovado.
+Códigos de saída: 0 = gate aprovado; 1 = erro técnico; 2 = gate reprovado;
+3 = a mesma consulta devolveu resultado diferente do snapshot anterior.
 
 Uso:  python -m src.extracao_bd --uf RR --ano-inicio 2019 --ano-fim 2025
 """
 
 import argparse
-import csv
-import hashlib
 import logging
 import random
 import re
 import sys
 import time
-from datetime import datetime, timezone
-from importlib import metadata
-from pathlib import Path
 
 import pandas as pd
 
 from src import config
+from src.snapshots import SnapshotDivergente, salvar_snapshot
 from src.consultas import (
     montar_contagens_nao_nulos,
     renderizar,
     validar_anos,
     validar_dataset,
     codigo_uf,
+    formatar_tolerancia,
     validar_identificador,
     validar_uf,
 )
@@ -44,7 +42,9 @@ COLUNAS_OBRIGATORIAS = {"ano", "id_escola"}
 # Usadas nas somas de consistência (aprovação + reprovação + abandono ≈ 100).
 COLUNAS_SOMA = [f"taxa_{t}_{e}" for e in ("ef_anos_finais", "em")
                 for t in ("aprovacao", "reprovacao", "abandono")]
-TOLERANCIA_SOMA = 1.0  # pontos percentuais
+# Desvio máximo linha a linha aceito na soma. Na BD de 2007–2022 o maior desvio
+# é 1,4e-14 (ruído de ponto flutuante); no INEP, 3e-14.
+TOLERANCIA_SOMA = 1e-6
 # Colunas que alimentam os alvos do projeto (03_METODOLOGIA.md, §1.4).
 COLUNAS_ALVO = ["taxa_abandono_ef_anos_finais", "taxa_abandono_em"]
 # Colunas exibidas no resumo (a tabela tem ~100 colunas de rendimento por série).
@@ -129,42 +129,6 @@ def executar_sql(sql: str, billing_project_id: str) -> pd.DataFrame:
 
 
 # --------------------------------------------------------------------------
-# Snapshots
-# --------------------------------------------------------------------------
-def salvar_snapshot(df: pd.DataFrame, nome: str, sql: str, formato: str = "parquet") -> Path:
-    """Grava o DataFrame com timestamp UTC no nome e registra em snapshots.csv.
-
-    O registro guarda hash da consulta, data, tamanho e versão da biblioteca.
-    Nunca grava credencial nem o ID do projeto de faturamento.
-    """
-    if formato not in ("parquet", "csv"):
-        raise ValueError(f"Formato inválido: {formato!r}")
-    agora = datetime.now(timezone.utc)
-    snapshot_id = f"{nome}_{agora:%Y%m%dT%H%M%SZ}"
-    config.DIR_CACHE.mkdir(parents=True, exist_ok=True)
-    config.DIR_METADADOS.mkdir(parents=True, exist_ok=True)
-    caminho = config.DIR_CACHE / f"{snapshot_id}.{formato}"
-    if formato == "parquet":
-        df.to_parquet(caminho, index=False)
-    else:
-        df.to_csv(caminho, index=False, encoding="utf-8")
-
-    try:
-        versao = metadata.version("basedosdados")
-    except metadata.PackageNotFoundError:
-        versao = "desconhecida"
-    novo = not config.ARQ_SNAPSHOTS.exists()
-    with open(config.ARQ_SNAPSHOTS, "a", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        if novo:
-            w.writerow(["snapshot_id", "consulta", "sha256_consulta", "data_extracao_utc",
-                        "n_linhas", "n_colunas", "versao_basedosdados", "arquivo"])
-        w.writerow([snapshot_id, nome, hashlib.sha256(sql.encode("utf-8")).hexdigest(),
-                    agora.isoformat(timespec="seconds"), len(df), df.shape[1], versao, caminho.name])
-    return caminho
-
-
-# --------------------------------------------------------------------------
 # Etapa zero
 # --------------------------------------------------------------------------
 def descobrir_colunas(dataset: str, tabela: str, billing: str) -> list[str]:
@@ -196,17 +160,20 @@ def avaliar_gate(df: pd.DataFrame, colunas_rend: list[str], ano_inicio: int, ano
         sem_dado = [int(a) for a, n in zip(df["ano"], df[f"nn_{c}"]) if n == 0]
         if sem_dado:
             problemas.append(f"{c} é nula em todas as escolas nos anos {sem_dado}")
-    # Aprovação + reprovação + abandono deve fechar 100%; senão as colunas estão trocadas.
-    for col in ("soma_af", "soma_em"):
-        if col in df:
-            ruins = [int(a) for a, v in zip(df["ano"], df[col])
-                     if pd.notna(v) and abs(v - 100) > TOLERANCIA_SOMA]
-            if ruins:
-                problemas.append(f"{col} longe de 100% nos anos {ruins}: colunas de rendimento inconsistentes")
+    # Linha a linha: aprovação + reprovação + abandono fecha 100 em cada escola,
+    # e as três taxas vêm juntas. Uma média boa pode esconder linhas ruins.
+    for etapa in ("af", "em"):
+        for col, descricao in ((f"n_soma_fora_{etapa}", "soma das três taxas longe de 100"),
+                               (f"n_trio_parcial_{etapa}", "só uma ou duas das três taxas")):
+            if col in df:
+                ruins = {int(a): int(n) for a, n in zip(df["ano"], df[col]) if n > 0}
+                if ruins:
+                    problemas.append(f"{etapa.upper()}: {descricao} (escolas por ano: {ruins})")
     return problemas
 
 
-def etapa_zero(uf: str, ano_inicio: int, ano_fim: int, billing: str, formato: str) -> int:
+def etapa_zero(uf: str, ano_inicio: int, ano_fim: int, billing: str, formato: str,
+               aceitar_divergencia: bool = False) -> int:
     uf = validar_uf(uf)
     ano_inicio, ano_fim = validar_anos(ano_inicio, ano_fim)
     dataset = validar_dataset(config.DATASET_INDICADORES)
@@ -235,15 +202,16 @@ def etapa_zero(uf: str, ano_inicio: int, ano_fim: int, billing: str, formato: st
     sql = renderizar(
         "verificacao/01_presenca_tx_rend.sql",
         dataset=dataset, tabela=tabela, uf_codigo=codigo_uf(uf),
-        ano_inicio=ano_inicio, ano_fim=ano_fim,
+        ano_inicio=ano_inicio, ano_fim=ano_fim, tolerancia=formatar_tolerancia(TOLERANCIA_SOMA),
         contagens_nao_nulos=montar_contagens_nao_nulos(colunas_rend),
     )
     df = executar_sql(sql, billing)
-    caminho = salvar_snapshot(df, "check_tx_rend", sql, formato)
-    log.info("Snapshot salvo em %s", caminho)
+    caminho = salvar_snapshot(df, "check_tx_rend", sql, formato, aceitar_divergencia)
+    log.info("Snapshot: %s", caminho)
 
     with pd.option_context("display.width", 200, "display.max_columns", None):
-        resumo = ["ano", "n_linhas", "n_escolas", "n_duplicadas", "soma_af", "soma_em"] + [
+        resumo = ["ano", "n_linhas", "n_escolas", "n_duplicadas", "n_soma_fora_af", "n_soma_fora_em",
+                  "n_trio_parcial_af", "n_trio_parcial_em"] + [
             c for c in df.columns if _RE_RESUMO.match(c)]
         print(df[resumo].to_string(index=False))
     problemas = avaliar_gate(df, colunas_rend, ano_inicio, ano_fim)
@@ -252,7 +220,7 @@ def etapa_zero(uf: str, ano_inicio: int, ano_fim: int, billing: str, formato: st
         for p in problemas:
             print(f" - {p}")
         return 2
-    print("\nGATE APROVADO: taxa de rendimento presente por escola-ano em todos os anos.")
+    print("\nGATE APROVADO: rendimento presente e consistente linha a linha em todos os anos.")
     return 0
 
 
@@ -264,10 +232,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--formato", choices=["parquet", "csv"], default="parquet")
     ap.add_argument("--billing-project", default=config.BILLING_PROJECT_ID,
                     help="Projeto de faturamento (padrão: BD_BILLING_PROJECT_ID ou abandonoescolar1)")
+    ap.add_argument("--aceitar-divergencia", action="store_true",
+                    help="Adota o resultado novo quando difere do snapshot anterior da mesma consulta")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
-        return etapa_zero(args.uf, args.ano_inicio, args.ano_fim, args.billing_project, args.formato)
+        return etapa_zero(args.uf, args.ano_inicio, args.ano_fim, args.billing_project, args.formato,
+                          args.aceitar_divergencia)
+    except SnapshotDivergente as e:
+        log.error("%s", e)
+        return e.codigo_saida
     except (ErroExtracao, ValueError) as e:
         log.error("%s", e)
         return 1

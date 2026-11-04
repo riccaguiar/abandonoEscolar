@@ -69,7 +69,8 @@ def test_etapa_zero_aprovada(monkeypatch):
         "ano": [2019, 2020], "n_linhas": [10, 10], "n_escolas": [10, 10],
         "n_duplicadas": [0, 0], "nn_taxa_abandono_em": [8, 9],
         "nn_taxa_abandono_ef_anos_finais": [5, 6],
-        "soma_af": [100.0, 100.0], "soma_em": [100.0, 99.9],
+        "n_soma_fora_af": [0, 0], "n_soma_fora_em": [0, 0],
+        "n_trio_parcial_af": [0, 0], "n_trio_parcial_em": [0, 0],
     })
     _fake_bd(monkeypatch, [colunas, contagem])
     assert ex.etapa_zero("RR", 2019, 2020, "p", "csv") == 0
@@ -92,9 +93,13 @@ def test_gate_detecta_ano_ausente_e_nulos():
     assert len(problemas) == 2  # ano 2020 ausente + abandono_em nulo em 2019
 
 
-def test_gate_detecta_soma_inconsistente():
-    df = pd.DataFrame({"ano": [2023], "n_linhas": [5], "n_escolas": [5], "n_duplicadas": [0],
-                       "nn_taxa_abandono_em": [3], "nn_taxa_abandono_ef_anos_finais": [3],
-                       "soma_af": [120.0], "soma_em": [100.0]})
-    problemas = ex.avaliar_gate(df, ex.COLUNAS_ALVO, 2023, 2023)
-    assert problemas == ["soma_af longe de 100% nos anos [2023]: colunas de rendimento inconsistentes"]
+def test_gate_detecta_linhas_inconsistentes():
+    df = pd.DataFrame({"ano": [2022, 2023], "n_linhas": [5, 5], "n_escolas": [5, 5], "n_duplicadas": [0, 0],
+                       "nn_taxa_abandono_em": [3, 3], "nn_taxa_abandono_ef_anos_finais": [3, 3],
+                       "n_soma_fora_af": [0, 80], "n_soma_fora_em": [0, 0],
+                       "n_trio_parcial_af": [0, 0], "n_trio_parcial_em": [1, 0]})
+    problemas = ex.avaliar_gate(df, ex.COLUNAS_ALVO, 2022, 2023)
+    assert problemas == [
+        "AF: soma das três taxas longe de 100 (escolas por ano: {2023: 80})",
+        "EM: só uma ou duas das três taxas (escolas por ano: {2022: 1})",
+    ]

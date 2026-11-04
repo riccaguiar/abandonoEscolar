@@ -20,7 +20,6 @@ Uso:
 """
 
 import argparse
-import hashlib
 import json
 import logging
 import os
@@ -32,7 +31,8 @@ import pandas as pd
 
 from src import config
 from src.consultas import codigo_uf, renderizar, validar_anos, validar_dataset, validar_identificador, validar_uf
-from src.extracao_bd import ErroExtracao, executar_sql, salvar_snapshot
+from src.extracao_bd import ErroExtracao, executar_sql
+from src.snapshots import SnapshotDivergente, salvar_snapshot, sha256_arquivo, ultimo_snapshot
 
 log = logging.getLogger("conferencia_rendimento")
 
@@ -47,14 +47,6 @@ MAPA_RENDIMENTO = {
     for etapa, etapa_bd in (("FUN", "ef"), ("FUN_AI", "ef_anos_iniciais"),
                             ("FUN_AF", "ef_anos_finais"), ("MED", "em"))
 }
-
-
-def sha256_arquivo(caminho: Path) -> str:
-    h = hashlib.sha256()
-    with open(caminho, "rb") as f:
-        for bloco in iter(lambda: f.read(1 << 20), b""):
-            h.update(bloco)
-    return h.hexdigest()
 
 
 def normalizar_id_escola(serie: pd.Series) -> tuple[pd.Series, int]:
@@ -127,7 +119,8 @@ def localizar_deslocamento(inep: pd.DataFrame, bd: pd.DataFrame, ano: int) -> pd
     return pd.DataFrame(linhas)
 
 
-def carregar_bd(extrair: bool, billing: str, ano_inicio: int, ano_fim: int) -> tuple[pd.DataFrame, Path]:
+def carregar_bd(extrair: bool, billing: str, ano_inicio: int, ano_fim: int,
+                aceitar_divergencia: bool = False) -> tuple[pd.DataFrame, Path]:
     if extrair:
         sql = renderizar(
             "verificacao/02_escolas_uf_todas_colunas.sql",
@@ -135,12 +128,12 @@ def carregar_bd(extrair: bool, billing: str, ano_inicio: int, ano_fim: int) -> t
             tabela=validar_identificador(config.TABELA_ESCOLA),
             uf_codigo=codigo_uf(validar_uf(config.UF_PADRAO)), ano_inicio=ano_inicio, ano_fim=ano_fim,
         )
-        caminho = salvar_snapshot(executar_sql(sql, billing), PREFIXO_SNAPSHOT, sql)
+        caminho = salvar_snapshot(executar_sql(sql, billing), PREFIXO_SNAPSHOT, sql,
+                                  aceitar_divergencia=aceitar_divergencia)
     else:
-        candidatos = sorted(config.DIR_CACHE.glob(f"{PREFIXO_SNAPSHOT}_*.parquet"))
-        if not candidatos:
-            raise ErroExtracao("Nenhum snapshot da BD em dados/cache/. Rode com --extrair.")
-        caminho = candidatos[-1]
+        caminho = ultimo_snapshot(PREFIXO_SNAPSHOT)
+        if caminho is None:
+            raise ErroExtracao("Nenhum snapshot da BD registrado. Rode com --extrair.")
     return pd.read_parquet(caminho), caminho
 
 
@@ -152,13 +145,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--ano-inicio", type=int, default=2007)
     ap.add_argument("--ano-fim", type=int, default=2024)
     ap.add_argument("--billing-project", default=config.BILLING_PROJECT_ID)
+    ap.add_argument("--aceitar-divergencia", action="store_true",
+                    help="Com --extrair: adota o resultado novo se diferir do snapshot anterior")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
         if not args.base_inep or not Path(args.base_inep).exists():
             raise ErroExtracao("Informe --base-inep com o base_atual.parquet do grupo.")
         ano_inicio, ano_fim = validar_anos(args.ano_inicio, args.ano_fim)
-        bd, caminho_bd = carregar_bd(args.extrair, args.billing_project, ano_inicio, ano_fim)
+        bd, caminho_bd = carregar_bd(args.extrair, args.billing_project, ano_inicio, ano_fim,
+                                     args.aceitar_divergencia)
+    except SnapshotDivergente as e:
+        log.error("%s", e)
+        return e.codigo_saida
     except (ErroExtracao, ValueError) as e:
         log.error("%s", e)
         return 1

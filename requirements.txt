@@ -1,22 +1,28 @@
+# Dependências diretas, todas fixadas com ==.
+# O ambiente completo (dependências transitivas) está em requirements-lock.txt.
+# Alinhadas ao requirements.txt do grupo (gabsma25/abandono-escolar) onde é possível;
+# exceções explicadas abaixo.
+
 # Acesso à Base dos Dados (BigQuery)
-basedosdados==2.0.3   # fixada: testada com read_sql(query, billing_project_id=...)
-google-cloud-bigquery>=3.0
-google-api-core>=2.0
-google-auth>=2.0
+basedosdados==2.0.3
+google-cloud-bigquery==3.47.0
+google-api-core==2.43.2
+google-auth==2.62.1
+pandas-gbq==0.35.3
 
 # Dados
-pandas>=2.0
-pyarrow>=14.0        # leitura/escrita de Parquet
+# pandas fica em 2.3.3 (o grupo usa 3.0.5): basedosdados 2.0.3 depende de
+# pandavro, que exige pandas < 3. Os dados trocados com o grupo são Parquet.
+pandas==2.3.3
+numpy==2.5.3
+pyarrow==25.0.1
 
 # Configuração local (.env)
-python-dotenv>=1.0
+python-dotenv==1.2.4
 
-# Modelagem (fases seguintes)
-numpy>=1.26
-scikit-learn>=1.4
+# Modelagem: mesma versão do grupo. Trocar 1.8.0 por 1.9.1 já mudou um
+# resultado do grupo em até 0,0036 (P026).
+scikit-learn==1.8.0
 
 # Testes
-pytest>=8.0
-
-# Removido na mudança de fonte (nov/2026): requests/urllib3 para download
-# de zips do INEP, lógica de extração de zip e verificação de certificado TLS.
+pytest==9.1.1
