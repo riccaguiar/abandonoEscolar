@@ -41,13 +41,15 @@ sql/*.sql  ──► src/consultas.py ──► src/extracao_bd.py ──► Big
    reprova na hora.
 3. **Conta por ano.** Gera o SQL 01 com um `COUNTIF(coluna IS NOT NULL)`
    por coluna e roda para a UF e o intervalo de anos pedidos.
-4. **Salva o snapshot.** Arquivo `check_tx_rend_AAAAMMDDTHHMMSSZ.parquet`
-   em `dados/cache/` e uma linha em `dados/metadados/snapshots.csv`
-   (hash da consulta, data UTC, linhas, colunas, versão da biblioteca).
-   Nunca grava credencial.
-5. **Avalia o gate** (`02_DADOS.md`, §3). Reprova se faltar algum ano,
-   houver chave `(id_escola, ano)` duplicada ou se `taxa_abandono_ef_anos_finais`
-   ou `taxa_abandono_em` forem nulas em todas as escolas de algum ano.
+   Conta também, **linha a linha**, nos anos finais e no médio: escolas em que
+   `|aprovação + reprovação + abandono − 100|` passa de 1e-6, e escolas com só
+   uma ou duas das três taxas. (Na BD de 2007–2022 o maior desvio é 1,4e-14;
+   no INEP, 3e-14.)
+4. **Salva o snapshot** (ver "Snapshots", abaixo).
+5. **Avalia o gate.** Reprova se faltar algum ano, houver chave
+   `(id_escola, ano)` duplicada, `taxa_abandono_ef_anos_finais` ou
+   `taxa_abandono_em` forem nulas em todas as escolas de algum ano, ou se
+   **qualquer** escola tiver a soma fora de 100 ou o trio incompleto.
 
 ## Códigos de saída
 
@@ -56,6 +58,7 @@ sql/*.sql  ──► src/consultas.py ──► src/extracao_bd.py ──► Big
 | 0 | Gate aprovado. Pode seguir para a consolidação. |
 | 1 | Erro técnico (login, faturamento, tabela inexistente, SQL inválido). |
 | 2 | Gate reprovado: a Base dos Dados não tem o que o projeto precisa. |
+| 3 | A mesma consulta devolveu resultado diferente do snapshot anterior (ver abaixo). |
 
 ## Tratamento de erros
 
@@ -67,6 +70,23 @@ embrulha erros do Google) e decide:
 - **Não repete, explica:** credencial ausente/expirada, acesso negado
   (403, faturamento), tabela inexistente (404), SQL rejeitado (400).
 
+## Snapshots (`src/snapshots.py`)
+
+O hash da consulta prova o que foi pedido; o hash do resultado prova o que
+voltou. Cada snapshot é registrado em `dados/metadados/snapshots.csv` com os dois.
+
+| Situação | O que acontece |
+|---|---|
+| Consulta nova | Grava `dados/cache/<consulta>_<data UTC>.parquet` e registra (`status = ok`). |
+| Mesma consulta, mesmo resultado | Não grava nada; reaproveita o snapshot existente. |
+| Mesma consulta, resultado diferente | Grava em `dados/cache/divergente/`, registra com `status = divergente`, **não substitui** o anterior e sai com código 3. Para adotar o novo: rodar de novo com `--aceitar-divergencia`. |
+
+- `sha256_resultado`: hash do conteúdo lido de volta do disco (não depende de
+  metadados do Parquet). `sha256_arquivo`: hash dos bytes do arquivo.
+- `python -m src.snapshots --deduplicar` remove snapshots repetidos (mesma
+  consulta e mesmo resultado), mantendo o mais antigo.
+- Nunca grava credencial nem o ID do projeto de faturamento.
+
 ## Reprodutibilidade
 
 - A consulta é a especificação; vive no git.
@@ -74,6 +94,8 @@ embrulha erros do Google) e decide:
   mudar. Cada resultado deve citar o `snapshot_id`.
 - `dados/cache/` não vai para o git. `dados/metadados/snapshots.csv`
   vai.
+- Versões: `requirements.txt` fixa as dependências diretas com `==`;
+  `requirements-lock.txt` fixa o ambiente inteiro.
 
 ## O que já foi confirmado na Base dos Dados
 

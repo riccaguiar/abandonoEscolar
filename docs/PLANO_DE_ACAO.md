@@ -115,6 +115,13 @@ origem dos erros apontados. Proposta: **não manter cópias**.
 
 ### Fase 2 — Consertar o código de verificação (independe de terceiros)
 
+> **Feita em 2026-11-04, exceto o Python 3.12** (só há 3.14 instalado nesta máquina).
+> Gate linha a linha (tolerância 1e-6; também conta trio incompleto); snapshots com
+> sha256 do resultado e do arquivo, reaproveitamento e `divergente/` (código 3);
+> duplicatas removidas; versões fixadas (`requirements.txt` + `requirements-lock.txt`),
+> com pandas 2.3.3 em vez de 3.0.5 porque a `basedosdados` exige pandas < 3.
+> Saídas da Fase 3.1 idênticas byte a byte após a troca de versões.
+
 1. **Gate linha a linha.** Contar, por ano e etapa, linhas com
    `|aprovação + reprovação + abandono − 100|` acima de uma tolerância numérica
    (no INEP o desvio máximo é 3e-14). Antes de fixar, olhar a distribuição real

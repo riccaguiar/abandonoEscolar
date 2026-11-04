@@ -1,5 +1,5 @@
 {
-  "gerado_utc": "2026-11-04T02:21:28+00:00",
+  "gerado_utc": "2026-11-04T02:33:15+00:00",
   "snapshot_bd": "escolas_rr_todas_colunas_20261104T021802Z.parquet",
   "sha256_snapshot_bd": "122fd8beb0604aacde763e5061097365de56e2a3fc4a41b6ee3b2c0ddcb8dd1f",
   "base_inep": "base_atual.parquet",

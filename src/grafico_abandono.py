@@ -3,8 +3,9 @@
 Consulta sql/exploracao/01_abandono_por_ano.sql, salva o snapshot e gera um HTML
 autocontido (sem dependências externas) em docs/figuras/.
 
-Anos em que aprovação + reprovação + abandono não fecha ~100% são marcados como
-inconsistentes e NÃO entram nas linhas (ver docs/COMO_FUNCIONA.md).
+Escolas em que aprovação + reprovação + abandono não fecha 100 (ou só parte das
+três taxas existe) ficam fora da média. Se passarem de 1% das escolas do ano,
+o ano é marcado como inconsistente e NÃO entra nas linhas (ver docs/COMO_FUNCIONA.md).
 
 Uso:  python -m src.grafico_abandono --uf RR --ano-inicio 2007 --ano-fim 2024
 """
@@ -18,11 +19,14 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from src import config
-from src.consultas import codigo_uf, renderizar, validar_anos, validar_dataset, validar_identificador, validar_uf
-from src.extracao_bd import TOLERANCIA_SOMA, ErroExtracao, executar_sql, salvar_snapshot
+from src.consultas import (codigo_uf, formatar_tolerancia, renderizar, validar_anos, validar_dataset,
+                           validar_identificador, validar_uf)
+from src.extracao_bd import TOLERANCIA_SOMA, ErroExtracao, executar_sql
+from src.snapshots import SnapshotDivergente, salvar_snapshot
 
 log = logging.getLogger("grafico_abandono")
 DIR_FIGURAS = config.RAIZ / "docs" / "figuras"
+LIMITE_INCONSISTENTES = 0.01  # fração de escolas do ano; acima disso o ano sai do gráfico
 
 
 def preparar(df: pd.DataFrame) -> list[dict]:
@@ -31,8 +35,8 @@ def preparar(df: pd.DataFrame) -> list[dict]:
     for r in df.sort_values(["recorte", "ano"]).itertuples(index=False):
         reg = {"recorte": r.recorte, "ano": int(r.ano)}
         for etapa in ("af", "em"):
-            soma = getattr(r, f"soma_{etapa}")
-            ok = pd.notna(soma) and abs(soma - 100) <= TOLERANCIA_SOMA
+            n_ok, n_ruim = int(getattr(r, f"n_{etapa}")), int(getattr(r, f"n_inconsistente_{etapa}"))
+            ok = n_ruim <= LIMITE_INCONSISTENTES * (n_ok + n_ruim)
             valor = getattr(r, f"abandono_{etapa}")
             reg[etapa] = float(valor) if ok and pd.notna(valor) else None
             reg[f"n_{etapa}"] = int(getattr(r, f"n_{etapa}"))
@@ -55,6 +59,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--ano-inicio", type=int, default=2007)
     ap.add_argument("--ano-fim", type=int, default=2025)
     ap.add_argument("--billing-project", default=config.BILLING_PROJECT_ID)
+    ap.add_argument("--aceitar-divergencia", action="store_true",
+                    help="Adota o resultado novo quando difere do snapshot anterior da mesma consulta")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
@@ -65,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
             dataset=validar_dataset(config.DATASET_INDICADORES),
             tabela=validar_identificador(config.TABELA_ESCOLA),
             uf=uf, uf_codigo=codigo_uf(uf), ano_inicio=ano_inicio, ano_fim=ano_fim,
+            tolerancia=formatar_tolerancia(TOLERANCIA_SOMA),
         )
         df = executar_sql(sql, args.billing_project)
     except (ErroExtracao, ValueError) as e:
@@ -73,7 +80,11 @@ def main(argv: list[str] | None = None) -> int:
     if df.empty:
         log.error("Consulta não devolveu linhas.")
         return 1
-    caminho = salvar_snapshot(df, "abandono_por_ano", sql, "parquet")
+    try:
+        caminho = salvar_snapshot(df, "abandono_por_ano", sql, "parquet", args.aceitar_divergencia)
+    except SnapshotDivergente as e:
+        log.error("%s", e)
+        return e.codigo_saida
     linhas = preparar(df)
     inconsistentes = sorted({l["ano"] for l in linhas if not (l["ok_af"] and l["ok_em"])})
     if inconsistentes:
@@ -260,8 +271,9 @@ ETAPAS.forEach(et => {
 });
 
 const notas = [];
-if (inconsist.size) notas.push(`<b>${[...inconsist].sort().join(" e ")}:</b> fora das linhas. Na tabela da Base dos Dados, aprovação + reprovação + abandono não fecha 100% nesses anos (colunas aparentemente trocadas), também no Brasil inteiro. O número não é confiável até a BD corrigir.`);
+if (inconsist.size) notas.push(`<b>${[...inconsist].sort().join(" e ")}:</b> fora das linhas. Na tabela por escola da Base dos Dados, as colunas desses anos estão deslocadas (docs/conferencia/RESULTADO_FASE_3_1.md), em todo o Brasil. O número não é confiável até a BD corrigir.`);
 if (semDado.length) notas.push(`<b>${semDado.join(", ")}:</b> ainda não publicado na tabela por escola da Base dos Dados.`);
+notas.push(`Escolas em que aprovação + reprovação + abandono não fecha 100% ficam fora da média; o ano sai do gráfico quando passam de 1% das escolas.`);
 notas.push(`A média simples entre escolas difere da taxa oficial do INEP, que pondera pelo número de alunos. Use para ver a tendência, não para citar a taxa oficial.`);
 notas.push(`Snapshot: <code>${D.snapshot}</code> · gerado em ${D.gerado}.`);
 document.getElementById("notas").innerHTML = notas.map(n => `<li>${n}</li>`).join("");

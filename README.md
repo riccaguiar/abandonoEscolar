@@ -40,7 +40,7 @@ Cloud (BigQuery). Na primeira consulta, o navegador abre para login no Google.
 cd C:\Users\Ricardo\Documents\abandonoEscolar
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-lock.txt
 copy .env.example .env
 ```
 
