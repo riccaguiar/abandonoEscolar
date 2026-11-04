@@ -2,7 +2,7 @@
 
 O hash da consulta prova o que foi pedido; o hash do resultado prova o que
 voltou. A nuvem pode devolver dados diferentes para a mesma consulta, e é isso
-que este módulo detecta (02_DADOS.md, §13):
+que este módulo detecta (docs/DECISOES.md, 2026-11-04):
 
 - mesma consulta, mesmo resultado  -> não grava de novo; reaproveita o snapshot;
 - mesma consulta, resultado novo   -> grava em dados/cache/divergente/, registra

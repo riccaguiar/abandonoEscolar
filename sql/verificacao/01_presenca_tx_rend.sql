@@ -1,4 +1,4 @@
--- Etapa zero, passo 2 (gate de 02_DADOS.md, §3): a taxa de rendimento
+-- Etapa zero, passo 2 (gate; docs/COMO_FUNCIONA.md): a taxa de rendimento
 -- (aprovação, reprovação, abandono) existe por escola-ano na BD?
 --
 -- Para cada ano devolve:

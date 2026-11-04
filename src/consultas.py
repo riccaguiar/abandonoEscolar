@@ -1,6 +1,6 @@
 """Renderização segura de consultas SQL.
 
-Regra do projeto (02_DADOS.md, §11): nenhum valor externo entra no SQL sem
+Regra do projeto (docs/COMO_FUNCIONA.md): nenhum valor externo entra no SQL sem
 validação. Os arquivos .sql usam placeholders {{nome}}; este módulo valida
 cada valor e só então faz a substituição. Não usar f-string com entrada livre.
 """

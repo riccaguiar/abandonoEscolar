@@ -27,9 +27,9 @@ na branch `avaliacao-etapas-1-2`). Este repositório não define método nem tre
 - Próximos passos e pendências: [`docs/PLANO_DE_ACAO.md`](docs/PLANO_DE_ACAO.md),
   [`docs/PENDENCIAS.md`](docs/PENDENCIAS.md).
 
-> `01_PROJETO.md`, `02_DADOS.md` e `03_METODOLOGIA.md` são cópias adaptadas
-> dos *Relatórios do Projeto* e estão **desatualizados** (objetivo anterior a
-> 02/11/2026). Serão substituídos na Fase 1 do plano; não os use como referência.
+Objetivo vigente, papel deste repositório e correções de afirmações antigas:
+[`docs/CONTEXTO.md`](docs/CONTEXTO.md). Decisões deste repositório:
+[`docs/DECISOES.md`](docs/DECISOES.md).
 
 ## Como rodar
 
