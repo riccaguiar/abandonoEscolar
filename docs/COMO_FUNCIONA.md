@@ -2,7 +2,7 @@
 
 Este documento explica a arquitetura do pipeline de extração. Para
 rodar, veja `COMO_USAR.md`. Contexto científico e regras de dados estão
-em `01_PROJETO.md`, `02_DADOS.md` e `03_METODOLOGIA.md`.
+em `docs/CONTEXTO.md`, que aponta para os documentos do grupo.
 
 ## Ideia central
 
@@ -114,11 +114,13 @@ voltou. Cada snapshot é registrado em `dados/metadados/snapshots.csv` com os do
   `taxa_reprovacao_*`, `taxa_abandono_*`). Os alvos do projeto são
   `taxa_abandono_ef_anos_finais` e `taxa_abandono_em`.
 - Colunas de IED aparecem como `ied_*_nivel_1..6`, sem o agregado
-  `ALTO` do contrato legado (ver `02_DADOS.md`, §17).
+  `ALTO` da base oficial do grupo (lá, `ALTO` = N4 + N5 + N6).
 
 Resultado do gate em 03/11/2026: **reprovado** (2023–2024 inconsistentes, 2025 ausente).
 
 ## Como estender
 
-Nova tabela da BD = novo `.sql` em `sql/` + nota em `docs/fontes/` +
-teste de unicidade da chave (regras em `02_DADOS.md`, §4).
+Nova tabela da BD = novo `.sql` em `sql/` + checagem de unicidade da chave
+(escola, ano) + contagem antes e depois de cada `merge` (`validate="1:1"`) +
+conferência contra o INEP nos anos em que o grupo tem o dado + entrada em
+`docs/DECISOES.md`.

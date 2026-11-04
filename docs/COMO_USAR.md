@@ -29,13 +29,13 @@ O `.env` já aponta para `abandonoescolar1`. Ele não vai para o git.
 As pastas já existem. Para recriar em outra máquina:
 
 ```powershell
-New-Item -ItemType Directory -Force sql\verificacao, sql\indicadores, sql\futuro, src, tests, notebooks, dados\cache, dados\processado, dados\externo, dados\metadados, docs\fontes
+New-Item -ItemType Directory -Force sql\verificacao, sql\exploracao, src, tests, dados\cache, dados\metadados, docs\conferencia, docs\figuras
 ```
 
 Ou, em Bash:
 
 ```bash
-mkdir -p sql/{verificacao,indicadores,futuro} src tests notebooks dados/{cache,processado,externo,metadados} docs/fontes
+mkdir -p sql/{verificacao,exploracao} src tests dados/{cache,metadados} docs/{conferencia,figuras}
 ```
 
 ## 4. Rodar a Etapa zero

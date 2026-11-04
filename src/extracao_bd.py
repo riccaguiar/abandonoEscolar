@@ -45,7 +45,7 @@ COLUNAS_SOMA = [f"taxa_{t}_{e}" for e in ("ef_anos_finais", "em")
 # Desvio máximo linha a linha aceito na soma. Na BD de 2007–2022 o maior desvio
 # é 1,4e-14 (ruído de ponto flutuante); no INEP, 3e-14.
 TOLERANCIA_SOMA = 1e-6
-# Colunas que alimentam os alvos do projeto (03_METODOLOGIA.md, §1.4).
+# Colunas que alimentam os desfechos do projeto (abandono AF e EM em t+1; docs/CONTEXTO.md §2).
 COLUNAS_ALVO = ["taxa_abandono_ef_anos_finais", "taxa_abandono_em"]
 # Colunas exibidas no resumo (a tabela tem ~100 colunas de rendimento por série).
 _RE_RESUMO = re.compile(r"^nn_taxa_(aprovacao|reprovacao|abandono)_(ef|ef_anos_iniciais|ef_anos_finais|em)$")
@@ -185,7 +185,7 @@ def etapa_zero(uf: str, ano_inicio: int, ano_fim: int, billing: str, formato: st
     if faltam:
         raise ErroExtracao(
             f"Colunas obrigatórias ausentes na tabela: {sorted(faltam)}. "
-            f"Colunas encontradas: {colunas}. Ajuste a consulta e o mapeamento (02_DADOS.md, §17)."
+            f"Colunas encontradas: {colunas}. Ajuste as consultas em sql/verificacao/."
         )
     faltam_soma = [c for c in COLUNAS_SOMA if c not in colunas]
     if faltam_soma:

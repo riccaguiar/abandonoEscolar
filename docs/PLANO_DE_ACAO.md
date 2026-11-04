@@ -90,6 +90,12 @@ Portanto o meu projeto **não é um pipeline de modelagem paralelo**. O papel
 
 ### Fase 1 — Documentação: alinhar e parar de duplicar
 
+> **Feita em 2026-11-04.** `01_PROJETO.md`, `02_DADOS.md` e `03_METODOLOGIA.md`
+> removidos; no lugar, `docs/CONTEXTO.md` (objetivo vigente citado do grupo,
+> papel deste repositório, correções das afirmações herdadas) e `docs/DECISOES.md`
+> (log datado). Referências a arquivos inexistentes corrigidas. Fica para o grupo:
+> registrar a correção da premissa da D1 e corrigir os *Relatórios do Projeto*.
+
 Os meus `01_PROJETO.md`, `02_DADOS.md` e `03_METODOLOGIA.md` são cópias
 adaptadas dos `Relatórios do Projeto/`, que estão desatualizados e são a
 origem dos erros apontados. Proposta: **não manter cópias**.
